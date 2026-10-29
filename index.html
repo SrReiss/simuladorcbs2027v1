@@ -167,6 +167,23 @@ td.diff.good { color: var(--good); }
 td.diff.bad { color: var(--bad); }
 tr.hl-margem td.diff, tr.hl-efetivo td.diff { color: inherit; }
 
+/* Preço sugerido */
+.seg-sm { width: min(100%, 340px); }
+.seg-sm label { padding: 6px 10px; font-size: 13px; text-align: center; }
+.sug-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1100px) { .sug-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sug-kpis > div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+.sug-kpis .k { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.sug-kpis .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sug-kpis .s { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sug-kpis .main { border-color: var(--accent); }
+.sug-kpis .main .v { color: var(--accent); }
+.sug-empty { color: var(--bad); font-size: 14px; }
+#t-sug tbody tr { cursor: pointer; }
+#t-sug tbody tr:hover td { background: var(--surface-2); }
+#t-sug tbody tr.sel td { background: var(--accent-soft); }
+#t-sug tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
 /* Comparativo */
 #cmp tbody tr { cursor: pointer; }
 #cmp tbody tr:hover td { background: var(--surface-2); }
@@ -299,6 +316,20 @@ body { margin: 0; }
         <p class="note">Hoje em % do preço de venda; 2027 em % do preço ao cliente (vendas brutas do cenário). A margem considera a venda e o custo da compra; frete, serviços e devoluções entram na carga efetiva.</p>
       </section>
 
+      <section class="card" id="sug-card">
+        <div class="card-head">
+          <h2>Preço para manter a margem de hoje</h2>
+          <div class="seg two seg-sm" role="radiogroup" aria-label="Critério da margem">
+            <input type="radio" name="alvo" id="alvo-valor" value="valor"><label for="alvo-valor">Mesmo valor (R$)</label>
+            <input type="radio" name="alvo" id="alvo-pct" value="pct"><label for="alvo-pct">Mesmo percentual</label>
+          </div>
+        </div>
+        <p class="note" id="sug-meta"></p>
+        <div class="sug-kpis" id="sug-kpis"></div>
+        <div class="tbl-wrap"><table id="t-sug"></table></div>
+        <p class="note">O preço sugerido substitui o cenário de preço de venda próprio; o preço do fornecedor segue a premissa de cada linha. Clique numa linha para trocar o cenário do fornecedor.</p>
+      </section>
+
       <section class="card">
         <div class="card-head"><h2>Carga efetiva</h2><span class="scenario-tag" id="tag2"></span></div>
         <div class="tbl-wrap"><table id="t-carga"></table></div>
@@ -360,7 +391,7 @@ ICMS/ISS = a × preço ao cliente</div>
     return { base: b, cbs: c, nota: F + c, baseTrib: F };
   }
 
-  function calcular(s, venda, forn) {
+  function calcular(s, venda, forn, Fforce) {
     var p = function (x) { return (+x || 0) / 100; };
     var com = s.ativ === "comercio", nc = s.regime === "nc";
     var pc = nc ? 0.0925 : 0.0365;
@@ -388,7 +419,7 @@ ICMS/ISS = a × preço ao cliente</div>
     var consEf0 = com ? (icms0 + difal0 - credICMSC0 - credICMSFr0 - devICMS0) : (iss0 - devISS0);
 
     // 2027
-    var F = venda === "C2" ? P : P - pc * basePC;
+    var F = Fforce != null ? Fforce : (venda === "C2" ? P : P - pc * basePC);
     var v = cbsCalc(F, aI + aD + aS, t, s.integra);
     var icms1 = aI * v.baseTrib, difal1 = aD * v.baseTrib, iss1 = aS * v.baseTrib;
     var liq1 = v.nota - v.cbs - icms1 - difal1 - iss1;
@@ -418,6 +449,26 @@ ICMS/ISS = a × preço ao cliente</div>
     };
   }
 
+  // Preço dos produtos que mantém a margem de hoje (em R$ ou em %), para um cenário de fornecedor.
+  // A margem e o preço ao cliente variam de forma linear com o preço dos produtos, então
+  // g(F) = margem(F) − alvo é uma reta e a raiz sai de dois pontos.
+  function precoSugerido(s, forn, alvo) {
+    var P = +s.P || 0;
+    if (P <= 0) return null;
+    var hoje = calcular(s, "C2", forn).hoje;
+    var mR = hoje.marg, mP = hoje.marg / P;
+    function g(F) {
+      var n = calcular(s, "C2", forn, F).novo;
+      return alvo === "pct" ? n.marg - mP * n.nota : n.marg - mR;
+    }
+    var F1 = P, F2 = 2 * P, g1 = g(F1), g2 = g(F2);
+    var slope = (g2 - g1) / (F2 - F1);
+    if (!(slope > 1e-9)) return null;
+    var F = F1 - g1 / slope;
+    if (!isFinite(F) || F <= 0) return null;
+    return calcular(s, "C2", forn, F);
+  }
+
   // ---------------- Formatação ----------------
   function n2(x) { return (Math.abs(x) < 0.005 ? 0 : x).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function brl(x) { return (x < -0.005 ? "−R$ " : "R$ ") + n2(Math.abs(x)); }
@@ -440,7 +491,7 @@ ICMS/ISS = a × preço ao cliente</div>
   var NUMS = ["P", "icms", "difal", "iss", "custo", "icmsC", "frete", "icmsF", "serv", "issS", "dev", "ref", "pcForn"];
   var DEF = { P: 1000, icms: 12, difal: 5, iss: 5, custo: 50.8, icmsC: 12, frete: 10.72, icmsF: 12, serv: 14.95, issS: 3,
               dev: 3.27, ref: 11.3468, pcForn: 9.25, ativ: "comercio", regime: "nc", venda: "C3", forn: "F3",
-              integra: true, excluiISS: true };
+              integra: true, excluiISS: true, alvo: "valor" };
   var KEY = "simulador-cbs-2027-v1";
   var $ = function (id) { return document.getElementById(id); };
   var state = {};
@@ -454,7 +505,7 @@ ICMS/ISS = a × preço ao cliente</div>
 
   function toForm() {
     NUMS.forEach(function (k) { $(k).value = fmtInput(state[k]); $(k).parentNode.classList.remove("invalid"); });
-    ["ativ", "regime", "venda", "forn"].forEach(function (name) {
+    ["ativ", "regime", "venda", "forn", "alvo"].forEach(function (name) {
       var el = document.querySelector('input[name="' + name + '"][value="' + state[name] + '"]');
       if (el) el.checked = true;
     });
@@ -543,6 +594,41 @@ ICMS/ISS = a × preço ao cliente</div>
     c += row("total", "Total sobre o consumo", { v: h.pcEf + h.consEf, p: t0 }, { v: n.cbsEf + n.consEf, p: t1 });
     $("t-carga").innerHTML = c + "</tbody>";
 
+    // Preço sugerido para manter a margem de hoje
+    var alvo = state.alvo === "pct" ? "pct" : "valor";
+    $("sug-meta").textContent = "Margem de hoje: " + brl(h.marg) + " (" + pct(m0) + "). " +
+      (alvo === "pct" ? "Busca o preço que mantém o mesmo percentual sobre o preço ao cliente."
+                      : "Busca o preço que mantém o mesmo valor em reais por venda.");
+    var sel = precoSugerido(state, state.forn, alvo);
+    if (sel) {
+      var sn = sel.novo;
+      $("sug-kpis").innerHTML =
+        '<div class="main"><span class="k">Preço dos produtos</span><span class="v">' + brl(sn.F) + '</span><span class="s">' +
+          pctS(ratio(sn.F, r.P) - 1) + " sobre " + brl(r.P) + "</span></div>" +
+        '<div><span class="k">Preço ao cliente</span><span class="v">' + brl(sn.nota) + '</span><span class="s">com CBS de ' + brl(sn.cbs) +
+          " · " + pctS(ratio(sn.nota, r.P) - 1) + "</span></div>" +
+        '<div><span class="k">Margem</span><span class="v">' + brl(sn.marg) + '</span><span class="s">' + pct(ratio(sn.marg, sn.nota)) + " do preço ao cliente</span></div>" +
+        '<div><span class="k">CBS efetiva</span><span class="v">' + pct(ratio(sn.cbsEf, sn.nota)) + '</span><span class="s">' + brl(sn.cbsEf) + " por venda</span></div>";
+    } else {
+      $("sug-kpis").innerHTML = '<p class="sug-empty">Com essas premissas não existe preço que alcance a margem de hoje' +
+        (alvo === "pct" ? " em percentual. Tente o critério em reais." : ".") + "</p>";
+    }
+    var ts = '<thead><tr><th>Preço do fornecedor</th><th>Preço dos produtos</th><th>Preço ao cliente</th><th>Variação</th><th>Margem</th><th>CBS efetiva</th></tr></thead><tbody>';
+    ["F2", "F3"].forEach(function (fk) {
+      var x = precoSugerido(state, fk, alvo), on = fk === state.forn;
+      ts += '<tr tabindex="0" data-f="' + fk + '"' + (on ? ' class="sel" aria-current="true"' : "") + "><td>" +
+        LBL[fk].charAt(0).toUpperCase() + LBL[fk].slice(1) + "</td>";
+      if (x) {
+        var xn = x.novo;
+        ts += "<td>" + n2(xn.F) + "</td><td>" + n2(xn.nota) + "</td><td>" + pctS(ratio(xn.nota, r.P) - 1) + "</td>" +
+          "<td>" + n2(xn.marg) + '<span class="pct">' + pct(ratio(xn.marg, xn.nota)) + "</span></td>" +
+          "<td>" + pct(ratio(xn.cbsEf, xn.nota)) + "</td></tr>";
+      } else {
+        ts += '<td class="na" colspan="5">sem preço possível</td></tr>';
+      }
+    });
+    $("t-sug").innerHTML = ts + "</tbody>";
+
     // Comparativo
     var combos = [["C2", "F2"], ["C2", "F3"], ["C3", "F2"], ["C3", "F3"]];
     var k = '<thead><tr><th>Cenário</th><th>Preço ao cliente</th><th>Variação</th><th>CBS efetiva</th><th>Margem</th><th>vs. hoje</th></tr></thead><tbody>';
@@ -586,6 +672,19 @@ ICMS/ISS = a × preço ao cliente</div>
     state.venda = tr.dataset.v; state.forn = tr.dataset.f; save(); toForm(); render();
   }
   $("cmp").addEventListener("click", function (e) { pick(e.target.closest("tr[data-v]")); });
+  var sugCard = $("sug-card");
+  sugCard.addEventListener("change", function (e) {
+    if (e.target.name === "alvo") { state.alvo = e.target.value; save(); render(); }
+  });
+  function pickForn(tr) {
+    if (!tr || !tr.dataset.f) return;
+    state.forn = tr.dataset.f; save(); toForm(); render();
+    var again = document.querySelector('#t-sug tr[data-f="' + tr.dataset.f + '"]'); if (again) again.focus();
+  }
+  $("t-sug").addEventListener("click", function (e) { pickForn(e.target.closest("tr[data-f]")); });
+  $("t-sug").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickForn(e.target.closest("tr[data-f]")); }
+  });
   $("cmp").addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); var tr = e.target.closest("tr[data-v]"); pick(tr);
       var again = document.querySelector('#cmp tr[data-v="' + tr.dataset.v + '"][data-f="' + tr.dataset.f + '"]'); if (again) again.focus(); }
