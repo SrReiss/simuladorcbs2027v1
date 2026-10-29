@@ -1,9 +1,17 @@
 <!doctype html>
+<!--
+  Simulador CBS 2027
+  © 2026 Maicon Felipe Teixeira dos Reis. Todos os direitos reservados.
+  É proibida a cópia, reprodução, modificação ou distribuição, total ou parcial,
+  deste simulador e do seu código sem autorização prévia e por escrito do autor.
+-->
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Simulador do impacto da CBS (Reforma Tributária) no preço, na margem e na carga efetiva de uma venda.">
+<meta name="author" content="Maicon Felipe Teixeira dos Reis">
+<meta name="copyright" content="© 2026 Maicon Felipe Teixeira dos Reis">
 <title>Simulador CBS 2027</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -204,6 +212,8 @@ details.how[open] > summary { margin-bottom: 4px; }
   border-radius: 8px; padding: 10px 12px; color: var(--ink); overflow-x: auto; white-space: pre;
 }
 .foot { font-size: 12px; color: var(--muted); }
+.site-foot { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.site-foot p:first-child { color: var(--ink); font-weight: 500; }
 
 @media (prefers-reduced-motion: no-preference) {
   .kpi .v, td { transition: color .15s ease; }
@@ -374,9 +384,20 @@ ICMS/ISS = a × preço ao cliente</div>
       </details>
     </main>
   </div>
+
+  <footer class="site-foot">
+    <p>© 2026 Maicon Felipe Teixeira dos Reis. Todos os direitos reservados.</p>
+    <p>É proibida a cópia, reprodução, modificação ou distribuição, total ou parcial, deste simulador e do seu código sem autorização prévia e por escrito do autor.</p>
+  </footer>
 </div>
 
 <script>
+/*!
+ * Simulador CBS 2027
+ * © 2026 Maicon Felipe Teixeira dos Reis. Todos os direitos reservados.
+ * É proibida a cópia, reprodução, modificação ou distribuição, total ou parcial,
+ * deste código sem autorização prévia e por escrito do autor.
+ */
 (function () {
   "use strict";
 
