@@ -21,19 +21,6 @@ Simulador web que compara, numa venda, o **PIS/COFINS de hoje** com a **CBS de 2
 
 ---
 
-## Como usar
-
-### Localmente
-Baixe o repositório e abra o `index.html` em qualquer navegador.
-
-### GitHub Pages
-1. No repositório, vá em **Settings → Pages**.
-2. Em **Build and deployment**, escolha **Deploy from a branch**.
-3. Selecione a branch `main` e a pasta `/ (root)` e clique em **Save**.
-4. Em alguns minutos o simulador fica disponível em `https://<usuario>.github.io/<repositorio>/`.
-
----
-
 ## Entradas
 
 | Grupo | Campo | Observação |
