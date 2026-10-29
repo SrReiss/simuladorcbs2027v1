@@ -15,6 +15,7 @@ Simulador web que compara, numa venda, o **PIS/COFINS de hoje** com a **CBS de 2
 - **Comércio ou serviço:** ICMS e DIFAL na venda a não contribuinte, ou ISS.
 - **Regime de PIS/COFINS atual:** não cumulativo (9,25%, com créditos) ou cumulativo (3,65%, sem créditos).
 - **Cenários de preço** da própria empresa e do fornecedor, com um **comparativo das quatro combinações**. Clicando numa linha do comparativo, ela passa a ser o cenário analisado.
+- **Preço para manter a margem de hoje:** calcula o preço dos produtos que mantém a margem atual, pelo mesmo valor em reais ou pelo mesmo percentual, para cada premissa de preço do fornecedor.
 - **Alíquota de referência configurável:** o simulador aplica automaticamente a redução de 0,1 ponto percentual de 2027.
 - **Premissas avançadas:** CBS na base do ICMS/ISS, exclusão do ISS da base do PIS/COFINS (Tema 118) e PIS/COFINS embutido no preço do fornecedor.
 - Aceita números no formato brasileiro (`2.500,00`) e guarda os últimos valores digitados no próprio navegador.
@@ -88,6 +89,23 @@ O mesmo cálculo é usado para a CBS cobrada pelos fornecedores, que é o crédi
 
 ### Devoluções
 Espelham a venda: estornam o mesmo percentual de PIS/COFINS, CBS e ICMS próprio da operação original. O DIFAL pago ao estado de destino não é recuperado.
+
+### Preço para manter a margem de hoje
+Para a premissa de fornecedor escolhida, o simulador busca o preço dos produtos (F) que, já com a CBS por fora, devolve a margem atual:
+
+- **Mesmo valor (R$):** margem de 2027 = margem de hoje em reais.
+- **Mesmo percentual:** margem de 2027 ÷ preço ao cliente = margem de hoje ÷ preço atual.
+
+Como a margem e o preço ao cliente variam de forma linear com F, a solução é exata. Com a CBS na base do ICMS, sendo K o custo líquido da compra (custo − créditos de CBS e ICMS):
+
+```
+líquido          = F × (1 − a) ÷ (1 + a × t)
+preço ao cliente = F × (1 + t) ÷ (1 + a × t)
+mesmo valor:      F = (margem de hoje + K) ÷ [(1 − a) ÷ (1 + a × t)]
+mesmo percentual: F = K ÷ [(1 − a) ÷ (1 + a × t) − margem % × (1 + t) ÷ (1 + a × t)]
+```
+
+Se a margem percentual de hoje for alta demais para ser alcançada com as premissas informadas, o simulador avisa que não há preço possível.
 
 ### Margem e carga efetiva
 - **Margem** = líquido da venda − custo da compra + créditos sobre a compra (PIS/COFINS ou CBS, e ICMS no comércio). Frete, serviços e devoluções entram só na carga efetiva.
