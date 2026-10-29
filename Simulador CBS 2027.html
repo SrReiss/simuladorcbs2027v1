@@ -1,0 +1,590 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Simulador CBS 2027</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: painel de premissas fixo à esquerda (empilha no celular), resultados à direita
+   em "demonstrativo" Hoje x 2027. Tema único no padrão do Sigmap: grafite, painéis com
+   borda, amarelo como destaque e rótulos em caixa alta. */
+:root {
+  --bg: #2b2b2b;
+  --surface: #313131;
+  --surface-2: #272727;
+  --ink: #ececec;
+  --muted: #a9a9a9;
+  --line: #464646;
+  --accent: #e8c53a;
+  --accent-ink: #1e1e1e;
+  --accent-soft: rgba(232, 197, 58, 0.12);
+  --blue: #74aee3;
+  --margem: rgba(232, 197, 58, 0.13);
+  --margem-ink: #f2d86a;
+  --efetivo: rgba(116, 174, 227, 0.14);
+  --efetivo-ink: #9fcbf2;
+  --good: #7fcf95;
+  --bad: #f08a76;
+  --focus: #e8c53a;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --radius: 12px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1280px; margin: 0 auto;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 24px;
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Cabeçalho */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.top > div { display: grid; gap: 6px; min-width: 0; max-width: 70ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: clamp(26px, 3.2vw, 34px); font-weight: 700; letter-spacing: -.01em; }
+.lede { color: var(--muted); }
+.btn-ghost {
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--accent-ink); background: var(--accent);
+  border: 1px solid var(--accent); border-radius: 8px; padding: 9px 16px; cursor: pointer;
+}
+.btn-ghost:hover { filter: brightness(1.06); }
+.top { padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+
+/* Estrutura */
+.layout { display: grid; grid-template-columns: minmax(290px, 360px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* Painel de premissas */
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 4px 18px 18px; display: grid; gap: 0;
+}
+@media (min-width: 901px) {
+  .panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); max-height: calc(100vh - 32px); overflow: auto; }
+}
+fieldset { border: 0; margin: 0; padding: 16px 0; display: grid; gap: 12px; border-bottom: 1px solid var(--line); min-width: 0; }
+fieldset:last-of-type { border-bottom: 0; }
+legend {
+  padding: 0; margin-bottom: 4px; float: left; width: 100%;
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+legend + * { clear: both; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span.lbl { font-size: 13px; font-weight: 500; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.affix { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.affix:focus-within { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+.affix input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink);
+  font: inherit; font-variant-numeric: tabular-nums; padding: 8px 10px; text-align: right;
+}
+.affix input:focus { outline: none; }
+.affix .unit { display: flex; align-items: center; padding: 0 10px; color: var(--muted); font-size: 13px; background: var(--surface); }
+.affix .unit.pre { border-right: 1px solid var(--line); }
+.affix .unit.post { border-left: 1px solid var(--line); }
+.affix.invalid { border-color: var(--bad); }
+.hint { font-size: 12px; color: var(--muted); }
+
+/* Escolhas (rádios em botões) */
+.seg { display: grid; gap: 6px; }
+.seg.two { grid-template-columns: 1fr 1fr; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label {
+  display: grid; gap: 2px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface-2); cursor: pointer; font-size: 14px; font-weight: 500; min-width: 0;
+}
+.seg label small { font-weight: 400; font-size: 12px; color: var(--muted); }
+.seg label:hover { border-color: #5a5a5a; }
+.seg input:checked + label { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.seg input:checked + label small { color: var(--accent-ink); opacity: .75; }
+.seg input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 2px; }
+.check { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; font-size: 13px; cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--accent); }
+details.adv > summary { cursor: pointer; font-size: 13px; color: var(--accent); font-weight: 500; }
+details.adv[open] > summary { margin-bottom: 10px; }
+details.adv > div { display: grid; gap: 12px; }
+
+/* Resultados */
+.results { display: grid; gap: 20px; min-width: 0; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.kpi .k { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.kpi .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.kpi .s { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kpi.margem { background: var(--margem); border-color: rgba(232, 197, 58, 0.45); }
+.kpi.margem .k, .kpi.margem .s { color: var(--margem-ink); }
+.kpi.efetivo { background: var(--efetivo); border-color: rgba(116, 174, 227, 0.45); }
+.kpi.efetivo .k, .kpi.efetivo .s { color: var(--efetivo-ink); }
+.chip { display: inline-block; font-weight: 600; }
+.chip.good { color: var(--good); }
+.chip.bad { color: var(--bad); }
+.kpi.margem .chip.good, .kpi.efetivo .chip.good { color: inherit; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.card h2 { font-size: 17px; font-weight: 600; }
+.card .note { font-size: 12.5px; color: var(--muted); }
+.scenario-tag { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+th, td { padding: 7px 10px; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 190px; }
+thead th { font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); vertical-align: bottom; }
+tbody td { border-bottom: 1px solid var(--line); }
+tbody tr:last-child td { border-bottom: 0; }
+td .pct { display: block; font-size: 12px; color: var(--muted); }
+@media (max-width: 560px) {
+  table { font-size: 13px; }
+  th, td { padding: 6px 6px; }
+  th:first-child, td:first-child { min-width: 118px; }
+  .card { padding: 14px 12px; }
+}
+tr.sub td { font-weight: 600; }
+tr.total td { font-weight: 700; }
+tr.hl-margem td { background: var(--margem); color: var(--margem-ink); }
+tr.hl-margem td .pct { color: var(--margem-ink); }
+tr.hl-efetivo td { background: var(--efetivo); color: var(--efetivo-ink); }
+tr.hl-efetivo td .pct { color: var(--efetivo-ink); }
+td.na { color: var(--muted); }
+td.diff.good { color: var(--good); }
+td.diff.bad { color: var(--bad); }
+tr.hl-margem td.diff, tr.hl-efetivo td.diff { color: inherit; }
+
+/* Comparativo */
+#cmp tbody tr { cursor: pointer; }
+#cmp tbody tr:hover td { background: var(--surface-2); }
+#cmp tbody tr.sel td { background: var(--accent-soft); }
+#cmp tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+#cmp td:first-child { font-size: 13px; }
+#cmp td:first-child b { font-weight: 600; }
+
+/* Explicação */
+details.how > summary { cursor: pointer; font-weight: 600; font-size: 17px; }
+details.how[open] > summary { margin-bottom: 4px; }
+.how-body { display: grid; gap: 14px; font-size: 14px; max-width: 80ch; }
+.how-body h3 { font-size: 14px; font-weight: 600; }
+.how-body p, .how-body li { color: var(--muted); }
+.how-body ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.formula {
+  font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 12px; color: var(--ink); overflow-x: auto; white-space: pre;
+}
+.foot { font-size: 12px; color: var(--muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .kpi .v, td { transition: color .15s ease; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Reforma Tributária · cálculo por venda</p>
+      <h1>Simulador CBS 2027</h1>
+      <p class="lede">Compare o PIS/COFINS de hoje com a CBS de 2027 numa venda: preço ao cliente, margem e carga efetiva, já com os créditos de compras, frete e serviços tomados.</p>
+    </div>
+    <button type="button" class="btn-ghost" id="reset">Restaurar valores padrão</button>
+  </header>
+
+  <div class="layout">
+    <form class="panel" id="form" novalidate>
+      <fieldset>
+        <legend>Venda</legend>
+        <label class="field">
+          <span class="lbl">Valor de venda (preço atual ao cliente)</span>
+          <span class="affix"><span class="unit pre">R$</span><input id="P" inputmode="decimal" autocomplete="off"></span>
+        </label>
+        <div class="seg two" role="radiogroup" aria-label="Atividade">
+          <input type="radio" name="ativ" id="ativ-com" value="comercio"><label for="ativ-com">Comércio<small>ICMS e DIFAL</small></label>
+          <input type="radio" name="ativ" id="ativ-serv" value="servico"><label for="ativ-serv">Serviço<small>ISS</small></label>
+        </div>
+        <div class="row2" id="grp-com">
+          <label class="field"><span class="lbl">ICMS da venda</span>
+            <span class="affix"><input id="icms" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <label class="field"><span class="lbl">DIFAL + FCP</span>
+            <span class="affix"><input id="difal" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <p class="hint" style="grid-column: 1 / -1">DIFAL na venda a não contribuinte de outro estado (inclua o FCP do destino).</p>
+        </div>
+        <div id="grp-serv" hidden>
+          <label class="field"><span class="lbl">ISS da venda</span>
+            <span class="affix"><input id="iss" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>PIS/COFINS hoje</legend>
+        <div class="seg two" role="radiogroup" aria-label="Regime de PIS/COFINS">
+          <input type="radio" name="regime" id="reg-nc" value="nc"><label for="reg-nc">Não cumulativo<small>9,25% com créditos</small></label>
+          <input type="radio" name="regime" id="reg-cum" value="cum"><label for="reg-cum">Cumulativo<small>3,65% sem créditos</small></label>
+        </div>
+        <p class="hint" id="hint-regime"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Compras e despesas (% da venda)</legend>
+        <div class="row2">
+          <label class="field"><span class="lbl">Custo da compra</span>
+            <span class="affix"><input id="custo" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <label class="field"><span class="lbl">ICMS na compra</span>
+            <span class="affix"><input id="icmsC" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <label class="field"><span class="lbl">Frete</span>
+            <span class="affix"><input id="frete" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <label class="field"><span class="lbl">ICMS do frete</span>
+            <span class="affix"><input id="icmsF" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <label class="field"><span class="lbl">Serviços tomados</span>
+            <span class="affix"><input id="serv" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <label class="field"><span class="lbl">ISS dos serviços</span>
+            <span class="affix"><input id="issS" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+          <label class="field"><span class="lbl">Devoluções de venda</span>
+            <span class="affix"><input id="dev" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
+        </div>
+        <p class="hint">Use só o que gera crédito de CBS: fornecedores e prestadores do regime regular.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>CBS 2027</legend>
+        <label class="field"><span class="lbl">Alíquota de referência</span>
+          <span class="affix"><input id="ref" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span>
+          <span class="hint" id="hint-ref"></span></label>
+        <span class="lbl" style="font-size:13px;font-weight:500">Preço de venda próprio</span>
+        <div class="seg" role="radiogroup" aria-label="Preço de venda próprio">
+          <input type="radio" name="venda" id="venda-c2" value="C2"><label for="venda-c2">Mantém o preço e soma a CBS por fora<small>O cliente paga o preço atual + CBS</small></label>
+          <input type="radio" name="venda" id="venda-c3" value="C3"><label for="venda-c3">Tira o PIS/COFINS e soma a CBS por fora<small id="desc-c3"></small></label>
+        </div>
+        <span class="lbl" style="font-size:13px;font-weight:500">Preço do fornecedor</span>
+        <div class="seg" role="radiogroup" aria-label="Preço do fornecedor">
+          <input type="radio" name="forn" id="forn-f2" value="F2"><label for="forn-f2">Mantém o preço e soma a CBS por fora<small>Vale para compras, frete e serviços</small></label>
+          <input type="radio" name="forn" id="forn-f3" value="F3"><label for="forn-f3">Tira o PIS/COFINS e soma a CBS por fora<small id="desc-f3"></small></label>
+        </div>
+        <details class="adv" id="adv">
+          <summary>Premissas avançadas</summary>
+          <div>
+            <label class="check"><input type="checkbox" id="integra"><span>A CBS integra a base do ICMS e do ISS<br><span class="hint">Entendimento já manifestado por SP, PE e DF; em discussão no PLP 16/2025.</span></span></label>
+            <label class="check" id="grp-tema118" hidden><input type="checkbox" id="excluiISS"><span>Excluir o ISS da base do PIS/COFINS<br><span class="hint">STF, Tema 118 (21/10/2026), com modulação de efeitos ainda pendente.</span></span></label>
+            <label class="field"><span class="lbl">PIS/COFINS embutido no preço do fornecedor</span>
+              <span class="affix"><input id="pcForn" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span>
+              <span class="hint">Usado quando o fornecedor tira o PIS/COFINS do preço. 9,25% se ele for não cumulativo, 3,65% se for cumulativo.</span></label>
+          </div>
+        </details>
+      </fieldset>
+    </form>
+
+    <main class="results" aria-live="polite">
+      <section class="kpis" id="kpis"></section>
+
+      <section class="card">
+        <div class="card-head"><h2>Venda e margem</h2><span class="scenario-tag" id="tag1"></span></div>
+        <div class="tbl-wrap"><table id="t-venda"></table></div>
+        <p class="note">Hoje em % do preço de venda; 2027 em % do preço ao cliente (vendas brutas do cenário). A margem considera a venda e o custo da compra; frete, serviços e devoluções entram na carga efetiva.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Carga efetiva</h2><span class="scenario-tag" id="tag2"></span></div>
+        <div class="tbl-wrap"><table id="t-carga"></table></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Comparativo dos cenários</h2><span class="note">Clique numa linha para usá-la acima</span></div>
+        <div class="tbl-wrap"><table id="cmp"></table></div>
+      </section>
+
+      <details class="card how">
+        <summary>Como o cálculo funciona</summary>
+        <div class="how-body">
+          <div><h3>Alíquota da CBS</h3><p>Em 2027 e 2028 a alíquota aplicada é a de referência menos 0,1 ponto percentual.</p></div>
+          <div><h3>CBS por fora com ICMS/ISS na base</h3>
+            <p>Com a CBS integrando a base do ICMS (ou ISS), sendo F o preço dos produtos, a a alíquota de ICMS + DIFAL (ou ISS) e t a alíquota da CBS:</p>
+            <div class="formula">base CBS = F × (1 − a) ÷ (1 + a × t)
+CBS = base × t
+preço ao cliente = F + CBS
+ICMS/ISS = a × preço ao cliente</div>
+            <p>Sem essa premissa: base = F × (1 − a), e o ICMS/ISS incide só sobre F.</p></div>
+          <div><h3>Preço de venda próprio</h3>
+            <ul>
+              <li>Mantém o preço: F = preço atual.</li>
+              <li>Tira o PIS/COFINS: F = preço − alíquota do regime × (preço − ICMS − DIFAL), e no serviço com o Tema 118, também sem o ISS.</li>
+            </ul></div>
+          <div><h3>Preço do fornecedor</h3>
+            <ul>
+              <li>Mantém o preço: a CBS é somada ao valor de hoje.</li>
+              <li>Tira o PIS/COFINS: compra − % embutido × (compra − ICMS); frete idem; serviços − % embutido × valor.</li>
+              <li>O crédito de CBS é a CBS cobrada pelo fornecedor; o de ICMS (só no comércio) incide sobre o novo valor da nota.</li>
+            </ul></div>
+          <div><h3>PIS/COFINS hoje</h3>
+            <ul>
+              <li>Débito: alíquota do regime × (preço − ICMS − DIFAL), e no serviço com o Tema 118, também sem o ISS.</li>
+              <li>Não cumulativo: crédito de 9,25% sobre compras e frete, sem o ICMS. Serviços tomados geram crédito só quando a empresa é de serviço.</li>
+              <li>Cumulativo: sem créditos.</li>
+            </ul></div>
+          <div><h3>Devoluções</h3><p>Espelham a venda: estornam o mesmo percentual de PIS/COFINS, CBS e ICMS próprio da venda. O DIFAL pago ao destino não é recuperado.</p></div>
+          <p class="foot">Simulação unitária para apoiar decisões de preço. Não substitui a apuração nem a análise caso a caso.</p>
+        </div>
+      </details>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------- Motor de cálculo ----------------
+  function cbsCalc(F, a, t, integra) {
+    F = Math.max(F, 0);
+    if (integra) {
+      var base = F * (1 - a) / (1 + a * t), cbs = base * t;
+      return { base: base, cbs: cbs, nota: F + cbs, baseTrib: F + cbs };
+    }
+    var b = F * (1 - a), c = b * t;
+    return { base: b, cbs: c, nota: F + c, baseTrib: F };
+  }
+
+  function calcular(s, venda, forn) {
+    var p = function (x) { return (+x || 0) / 100; };
+    var com = s.ativ === "comercio", nc = s.regime === "nc";
+    var pc = nc ? 0.0925 : 0.0365;
+    var t = Math.max(p(s.ref) - 0.001, 0);
+    var P = +s.P || 0;
+    var aI = com ? p(s.icms) : 0, aD = com ? p(s.difal) : 0, aS = com ? 0 : p(s.iss);
+
+    // Hoje
+    var icms0 = aI * P, difal0 = aD * P, iss0 = aS * P;
+    var basePC = P - icms0 - difal0 - (!com && s.excluiISS ? iss0 : 0);
+    var pis0 = pc * basePC;
+    var liq0 = P - pis0 - icms0 - difal0 - iss0;
+    var C = p(s.custo) * P, aC = p(s.icmsC), icmsC0 = aC * C;
+    var credICMSC0 = com ? icmsC0 : 0;
+    var credPCC0 = nc ? 0.0925 * (C - icmsC0) : 0;
+    var marg0 = liq0 - C + credPCC0 + credICMSC0;
+    var Fr = p(s.frete) * P, aF = p(s.icmsF), icmsFr0 = aF * Fr;
+    var credPCFr0 = nc ? 0.0925 * (Fr - icmsFr0) : 0;
+    var credICMSFr0 = com ? icmsFr0 : 0;
+    var S = p(s.serv) * P;
+    var credPCS0 = (nc && !com) ? 0.0925 * S : 0;
+    var dv = p(s.dev);
+    var devPC0 = dv * pis0, devICMS0 = dv * icms0, devISS0 = dv * iss0;
+    var pcEf0 = pis0 - credPCC0 - credPCFr0 - credPCS0 - devPC0;
+    var consEf0 = com ? (icms0 + difal0 - credICMSC0 - credICMSFr0 - devICMS0) : (iss0 - devISS0);
+
+    // 2027
+    var F = venda === "C2" ? P : P - pc * basePC;
+    var v = cbsCalc(F, aI + aD + aS, t, s.integra);
+    var icms1 = aI * v.baseTrib, difal1 = aD * v.baseTrib, iss1 = aS * v.baseTrib;
+    var liq1 = v.nota - v.cbs - icms1 - difal1 - iss1;
+    var pcf = p(s.pcForn), f3 = forn === "F3";
+    var Fc = f3 ? C - pcf * (C - aC * C) : C;
+    var c = cbsCalc(Fc, aC, t, s.integra);
+    var credICMSC1 = com ? aC * c.baseTrib : 0;
+    var marg1 = liq1 - c.nota + c.cbs + credICMSC1;
+    var Ff = f3 ? Fr - pcf * (Fr - aF * Fr) : Fr;
+    var f = cbsCalc(Ff, aF, t, s.integra);
+    var credICMSFr1 = com ? aF * f.baseTrib : 0;
+    var Fs = f3 ? S - pcf * S : S;
+    var sv = cbsCalc(Fs, p(s.issS), t, s.integra);
+    var devCBS = dv * v.cbs, devICMS1 = dv * icms1, devISS1 = dv * iss1;
+    var cbsEf = v.cbs - c.cbs - f.cbs - sv.cbs - devCBS;
+    var consEf1 = com ? (icms1 + difal1 - credICMSC1 - credICMSFr1 - devICMS1) : (iss1 - devISS1);
+
+    return {
+      com: com, nc: nc, pc: pc, t: t, P: P,
+      hoje: { icms: icms0, difal: difal0, iss: iss0, pis: pis0, liq: liq0, custo: C,
+              credPCC: credPCC0, credICMSC: credICMSC0, marg: marg0, credPCFr: credPCFr0,
+              credICMSFr: credICMSFr0, credPCS: credPCS0, devPC: devPC0, pcEf: pcEf0, consEf: consEf0 },
+      novo: { F: F, cbs: v.cbs, nota: v.nota, icms: icms1, difal: difal1, iss: iss1, liq: liq1,
+              custo: c.nota, credCBSC: c.cbs, credICMSC: credICMSC1, marg: marg1,
+              credCBSFr: f.cbs, credICMSFr: credICMSFr1, credCBSS: sv.cbs, devCBS: devCBS,
+              cbsEf: cbsEf, consEf: consEf1 }
+    };
+  }
+
+  // ---------------- Formatação ----------------
+  function n2(x) { return (Math.abs(x) < 0.005 ? 0 : x).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function brl(x) { return (x < -0.005 ? "−R$ " : "R$ ") + n2(Math.abs(x)); }
+  function pct(x) { return (isFinite(x) ? x * 100 : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%"; }
+  function ratio(a, b) { return b ? a / b : 0; }
+  function signed(x, fmt) { var s = fmt(Math.abs(x)); return Math.abs(x) < 0.00005 ? fmt(0) : (x > 0 ? "+" : "−") + s; }
+  function ppf(x) { return signed(x * 100, function (v) { return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }) + " p.p."; }
+  function money(x) { return signed(x, n2); }
+  function pctS(x) { return signed(x * 100, function (v) { return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }) + "%"; }
+  function parseNum(str) {
+    if (str == null) return NaN;
+    var s = String(str).replace(/\s|R\$|%/g, "");
+    if (s === "") return NaN;
+    if (s.indexOf(",") >= 0) s = s.replace(/\./g, "").replace(",", ".");
+    return Number(s);
+  }
+  function fmtInput(v) { return Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 4 }); }
+
+  // ---------------- Estado ----------------
+  var NUMS = ["P", "icms", "difal", "iss", "custo", "icmsC", "frete", "icmsF", "serv", "issS", "dev", "ref", "pcForn"];
+  var DEF = { P: 1000, icms: 12, difal: 5, iss: 5, custo: 50.8, icmsC: 12, frete: 10.72, icmsF: 12, serv: 14.95, issS: 3,
+              dev: 3.27, ref: 11.3468, pcForn: 9.25, ativ: "comercio", regime: "nc", venda: "C3", forn: "F3",
+              integra: true, excluiISS: true };
+  var KEY = "simulador-cbs-2027-v1";
+  var $ = function (id) { return document.getElementById(id); };
+  var state = {};
+
+  function load() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { saved = null; }
+    state = Object.assign({}, DEF, saved && typeof saved === "object" ? saved : {});
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* sem armazenamento: segue normal */ } }
+
+  function toForm() {
+    NUMS.forEach(function (k) { $(k).value = fmtInput(state[k]); $(k).parentNode.classList.remove("invalid"); });
+    ["ativ", "regime", "venda", "forn"].forEach(function (name) {
+      var el = document.querySelector('input[name="' + name + '"][value="' + state[name] + '"]');
+      if (el) el.checked = true;
+    });
+    $("integra").checked = !!state.integra;
+    $("excluiISS").checked = !!state.excluiISS;
+  }
+
+  // ---------------- Render ----------------
+  var LBL = {
+    C2: "Venda mantém o preço", C3: "Venda tira PIS/COFINS",
+    F2: "fornecedor mantém o preço", F3: "fornecedor tira PIS/COFINS"
+  };
+
+  function row(cls, label, hoje, novo, diff, diffCls) {
+    return '<tr class="' + (cls || "") + '"><td>' + label + "</td>" + cell(hoje) + cell(novo) +
+      (diff === undefined ? "" : '<td class="diff ' + (diffCls || "") + '">' + diff + "</td>") + "</tr>";
+  }
+  function cell(c) {
+    if (c === null || c === undefined) return '<td class="na">—</td>';
+    if (typeof c === "string") return '<td class="na">' + c + "</td>";
+    return "<td>" + n2(c.v) + (c.p !== undefined ? '<span class="pct">' + pct(c.p) + "</span>" : "") + "</td>";
+  }
+  function goodBad(x, higherIsGood) { if (Math.abs(x) < 0.00005) return ""; return (x > 0) === higherIsGood ? "good" : "bad"; }
+
+  function render() {
+    var r = calcular(state, state.venda, state.forn), h = r.hoje, n = r.novo;
+    var com = r.com, nc = r.nc;
+    var tag = LBL[state.venda] + " · " + LBL[state.forn];
+    $("tag1").textContent = tag; $("tag2").textContent = tag;
+
+    // Dicas dinâmicas
+    var aplic = Math.max(state.ref - 0.1, 0);
+    $("hint-ref").textContent = "Aplicada em 2027: " + aplic.toLocaleString("pt-BR", { maximumFractionDigits: 4 }) + "% (referência − 0,1 p.p.)";
+    $("desc-c3").textContent = "Tira " + (nc ? "9,25%" : "3,65%") + " sobre o preço sem " + (com ? "ICMS e DIFAL" : (state.excluiISS ? "ISS" : "tributos")) + ", depois soma a CBS";
+    $("desc-f3").textContent = "Tira " + n2(state.pcForn) + "% sobre o valor sem ICMS, depois soma a CBS";
+    $("hint-regime").textContent = nc
+      ? (com ? "Crédito sobre compras e frete. Serviços tomados não geram crédito no comércio." : "Crédito sobre compras, frete e serviços tomados.")
+      : "Sem créditos; só as devoluções reduzem a base.";
+    $("grp-com").hidden = !com; $("grp-serv").hidden = com; $("grp-tema118").hidden = com;
+
+    // KPIs
+    var precoVar = ratio(n.nota, r.P) - 1;
+    var m0 = ratio(h.marg, r.P), m1 = ratio(n.marg, n.nota);
+    var e0 = ratio(h.pcEf, r.P), e1 = ratio(n.cbsEf, n.nota);
+    var t0 = ratio(h.pcEf + h.consEf, r.P), t1 = ratio(n.cbsEf + n.consEf, n.nota);
+    $("kpis").innerHTML =
+      '<div class="kpi"><span class="k">Preço ao cliente</span><span class="v">' + brl(n.nota) + '</span><span class="s">' +
+        '<span class="chip">' + pctS(precoVar) + "</span> sobre " + brl(r.P) + "</span></div>" +
+      '<div class="kpi efetivo"><span class="k">CBS efetiva</span><span class="v">' + pct(e1) + '</span><span class="s">PIS/COFINS hoje ' + pct(e0) + "</span></div>" +
+      '<div class="kpi margem"><span class="k">Margem</span><span class="v">' + pct(m1) + '</span><span class="s">Hoje ' + pct(m0) +
+        ' · <span class="chip ' + goodBad(m1 - m0, true) + '">' + ppf(m1 - m0) + "</span></span></div>" +
+      '<div class="kpi"><span class="k">Tributos sobre o consumo</span><span class="v">' + pct(t1) + '</span><span class="s">Hoje ' + pct(t0) +
+        ' · <span class="chip ' + goodBad(t1 - t0, false) + '">' + ppf(t1 - t0) + "</span></span></div>";
+
+    // Tabela venda e margem
+    var head = "<thead><tr><th></th><th>Hoje<br>PIS/COFINS</th><th>2027<br>CBS</th><th>Diferença</th></tr></thead><tbody>";
+    var b = head;
+    b += row("", "Preço dos produtos", { v: r.P }, { v: n.F }, money(n.F - r.P));
+    b += row("", "(+) CBS por fora", null, { v: n.cbs }, money(n.cbs));
+    b += row("sub", "Preço ao cliente", { v: r.P }, { v: n.nota }, money(n.nota - r.P));
+    b += row("", "(−) PIS/COFINS", { v: h.pis, p: ratio(h.pis, r.P) }, null, money(-h.pis));
+    b += row("", "(−) CBS", null, { v: n.cbs, p: ratio(n.cbs, n.nota) }, money(n.cbs));
+    if (com) {
+      b += row("", "(−) ICMS", { v: h.icms, p: ratio(h.icms, r.P) }, { v: n.icms, p: ratio(n.icms, n.nota) }, money(n.icms - h.icms));
+      b += row("", "(−) DIFAL + FCP", { v: h.difal, p: ratio(h.difal, r.P) }, { v: n.difal, p: ratio(n.difal, n.nota) }, money(n.difal - h.difal));
+    } else {
+      b += row("", "(−) ISS", { v: h.iss, p: ratio(h.iss, r.P) }, { v: n.iss, p: ratio(n.iss, n.nota) }, money(n.iss - h.iss));
+    }
+    b += row("sub", "Líquido", { v: h.liq, p: ratio(h.liq, r.P) }, { v: n.liq, p: ratio(n.liq, n.nota) }, money(n.liq - h.liq), goodBad(n.liq - h.liq, true));
+    b += row("", "(−) Custo da compra", { v: h.custo }, { v: n.custo }, money(n.custo - h.custo), goodBad(n.custo - h.custo, false));
+    b += row("", "(+) Crédito de PIS/COFINS", nc ? { v: h.credPCC } : "sem crédito", null, money(-h.credPCC));
+    b += row("", "(+) Crédito de CBS", null, { v: n.credCBSC }, money(n.credCBSC));
+    if (com) b += row("", "(+) Crédito de ICMS", { v: h.credICMSC }, { v: n.credICMSC }, money(n.credICMSC - h.credICMSC));
+    b += row("total hl-margem", "Margem", { v: h.marg, p: m0 }, { v: n.marg, p: m1 }, money(n.marg - h.marg) + '<span class="pct">' + ppf(m1 - m0) + "</span>");
+    $("t-venda").innerHTML = b + "</tbody>";
+
+    // Tabela carga efetiva
+    var c = "<thead><tr><th></th><th>Hoje<br>PIS/COFINS</th><th>2027<br>CBS</th></tr></thead><tbody>";
+    c += row("", "Débito na venda", { v: h.pis }, { v: n.cbs });
+    c += row("", "(−) Crédito sobre compras", nc ? { v: h.credPCC } : "sem crédito", { v: n.credCBSC });
+    c += row("", "(−) Crédito sobre frete", nc ? { v: h.credPCFr } : "sem crédito", { v: n.credCBSFr });
+    c += row("", "(−) Crédito sobre serviços tomados", nc && !com ? { v: h.credPCS } : "sem crédito", { v: n.credCBSS });
+    c += row("", "(−) Devoluções de venda", { v: h.devPC }, { v: n.devCBS });
+    c += row("total hl-efetivo", "PIS/COFINS ou CBS efetivo", { v: h.pcEf, p: e0 }, { v: n.cbsEf, p: e1 });
+    c += row("", com ? "ICMS + DIFAL efetivos" : "ISS efetivo", { v: h.consEf, p: ratio(h.consEf, r.P) }, { v: n.consEf, p: ratio(n.consEf, n.nota) });
+    c += row("total", "Total sobre o consumo", { v: h.pcEf + h.consEf, p: t0 }, { v: n.cbsEf + n.consEf, p: t1 });
+    $("t-carga").innerHTML = c + "</tbody>";
+
+    // Comparativo
+    var combos = [["C2", "F2"], ["C2", "F3"], ["C3", "F2"], ["C3", "F3"]];
+    var k = '<thead><tr><th>Cenário</th><th>Preço ao cliente</th><th>Variação</th><th>CBS efetiva</th><th>Margem</th><th>vs. hoje</th></tr></thead><tbody>';
+    combos.forEach(function (cb) {
+      var x = calcular(state, cb[0], cb[1]), xn = x.novo;
+      var mm = ratio(xn.marg, xn.nota), sel = cb[0] === state.venda && cb[1] === state.forn;
+      k += '<tr tabindex="0" data-v="' + cb[0] + '" data-f="' + cb[1] + '"' + (sel ? ' class="sel" aria-current="true"' : "") + ">" +
+        "<td><b>" + LBL[cb[0]] + "</b><br>" + LBL[cb[1]] + "</td>" +
+        "<td>" + n2(xn.nota) + "</td><td>" + pctS(ratio(xn.nota, x.P) - 1) + "</td>" +
+        "<td>" + pct(ratio(xn.cbsEf, xn.nota)) + "</td><td>" + pct(mm) + "</td>" +
+        '<td class="diff ' + goodBad(mm - m0, true) + '">' + ppf(mm - m0) + "</td></tr>";
+    });
+    $("cmp").innerHTML = k + "</tbody>";
+  }
+
+  // ---------------- Eventos ----------------
+  function readNum(id) {
+    var v = parseNum($(id).value), ok = isFinite(v) && v >= 0 && (id !== "P" || v > 0);
+    $(id).parentNode.classList.toggle("invalid", !ok);
+    $(id).setAttribute("aria-invalid", ok ? "false" : "true");
+    if (ok) state[id] = v;
+    return ok;
+  }
+  function onChange(e) {
+    var t = e.target;
+    if (NUMS.indexOf(t.id) >= 0) readNum(t.id);
+    else if (t.type === "radio") state[t.name] = t.value;
+    else if (t.type === "checkbox") state[t.id] = t.checked;
+    save(); render();
+  }
+  var form = $("form");
+  form.addEventListener("input", onChange);
+  form.addEventListener("change", onChange);
+  form.addEventListener("submit", function (e) { e.preventDefault(); });
+  NUMS.forEach(function (id) {
+    $(id).addEventListener("blur", function () { if (readNum(id)) $(id).value = fmtInput(state[id]); });
+  });
+  $("reset").addEventListener("click", function () { state = Object.assign({}, DEF); save(); toForm(); render(); });
+  function pick(tr) {
+    if (!tr || !tr.dataset.v) return;
+    state.venda = tr.dataset.v; state.forn = tr.dataset.f; save(); toForm(); render();
+  }
+  $("cmp").addEventListener("click", function (e) { pick(e.target.closest("tr[data-v]")); });
+  $("cmp").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); var tr = e.target.closest("tr[data-v]"); pick(tr);
+      var again = document.querySelector('#cmp tr[data-v="' + tr.dataset.v + '"][data-f="' + tr.dataset.f + '"]'); if (again) again.focus(); }
+  });
+
+  load(); toForm(); render();
+})();
+</script>
+
+</body></html>
