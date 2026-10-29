@@ -178,7 +178,7 @@ tr.hl-margem td.diff, tr.hl-efetivo td.diff { color: inherit; }
 .sug-kpis .s { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .sug-kpis .main { border-color: var(--accent); }
 .sug-kpis .main .v { color: var(--accent); }
-.sug-empty { color: var(--bad); font-size: 14px; }
+.sug-empty { grid-column: 1 / -1; color: var(--bad); font-size: 14px; max-width: 80ch; margin: 0; }
 #t-sug tbody tr { cursor: pointer; }
 #t-sug tbody tr:hover td { background: var(--surface-2); }
 #t-sug tbody tr.sel td { background: var(--accent-soft); }
@@ -469,6 +469,14 @@ ICMS/ISS = a × preço ao cliente</div>
     return calcular(s, "C2", forn, F);
   }
 
+  // Teto da margem percentual em 2027: limite de margem ÷ preço ao cliente quando o preço cresce.
+  // Equivale a (1 − ICMS/ISS) ÷ (1 + CBS) com a CBS na base do ICMS/ISS.
+  function tetoMargem(s, forn) {
+    var P = +s.P || 1;
+    var a = calcular(s, "C2", forn, P).novo, b = calcular(s, "C2", forn, 2 * P).novo;
+    return (b.marg - a.marg) / (b.nota - a.nota);
+  }
+
   // ---------------- Formatação ----------------
   function n2(x) { return (Math.abs(x) < 0.005 ? 0 : x).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function brl(x) { return (x < -0.005 ? "−R$ " : "R$ ") + n2(Math.abs(x)); }
@@ -610,8 +618,12 @@ ICMS/ISS = a × preço ao cliente</div>
         '<div><span class="k">Margem</span><span class="v">' + brl(sn.marg) + '</span><span class="s">' + pct(ratio(sn.marg, sn.nota)) + " do preço ao cliente</span></div>" +
         '<div><span class="k">CBS efetiva</span><span class="v">' + pct(ratio(sn.cbsEf, sn.nota)) + '</span><span class="s">' + brl(sn.cbsEf) + " por venda</span></div>";
     } else {
-      $("sug-kpis").innerHTML = '<p class="sug-empty">Com essas premissas não existe preço que alcance a margem de hoje' +
-        (alvo === "pct" ? " em percentual. Tente o critério em reais." : ".") + "</p>";
+      var trib = com ? "da CBS, do ICMS e do DIFAL" : "da CBS e do ISS";
+      $("sug-kpis").innerHTML = alvo === "pct"
+        ? '<p class="sug-empty">Não existe preço que mantenha ' + pct(m0) + ". Com essas premissas, a margem em 2027 nunca passa de " +
+          pct(tetoMargem(state, state.forn)) + " do preço ao cliente, por maior que seja o preço, por causa " + trib +
+          ". Use o critério em reais para ver o preço que mantém o mesmo valor.</p>"
+        : '<p class="sug-empty">Com essas premissas não existe preço que alcance a margem de hoje.</p>';
     }
     var ts = '<thead><tr><th>Preço do fornecedor</th><th>Preço dos produtos</th><th>Preço ao cliente</th><th>Variação</th><th>Margem</th><th>CBS efetiva</th></tr></thead><tbody>';
     ["F2", "F3"].forEach(function (fk) {
@@ -624,7 +636,8 @@ ICMS/ISS = a × preço ao cliente</div>
           "<td>" + n2(xn.marg) + '<span class="pct">' + pct(ratio(xn.marg, xn.nota)) + "</span></td>" +
           "<td>" + pct(ratio(xn.cbsEf, xn.nota)) + "</td></tr>";
       } else {
-        ts += '<td class="na" colspan="5">sem preço possível</td></tr>';
+        ts += '<td class="na" colspan="5">sem preço possível' +
+          (alvo === "pct" ? " · margem máxima " + pct(tetoMargem(state, fk)) : "") + "</td></tr>";
       }
     });
     $("t-sug").innerHTML = ts + "</tbody>";
