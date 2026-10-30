@@ -17,8 +17,22 @@ Simulador web que compara, numa venda, o **PIS/COFINS de hoje** com a **CBS de 2
 - **Cenários de preço** da própria empresa e do fornecedor, com um **comparativo das quatro combinações**. Clicando numa linha do comparativo, ela passa a ser o cenário analisado.
 - **Preço para manter a margem de hoje:** calcula o preço dos produtos que mantém a margem atual, pelo mesmo valor em reais ou pelo mesmo percentual, para cada premissa de preço do fornecedor.
 - **Alíquota de referência configurável:** o simulador aplica automaticamente a redução de 0,1 ponto percentual de 2027.
+- **Margem com ou sem frete e serviços tomados:** opção para descontar também o frete e os serviços tomados (com os créditos de cada um), recomendada para prestadores de serviço.
 - **Premissas avançadas:** CBS na base do ICMS/ISS, exclusão do ISS da base do PIS/COFINS (Tema 118) e PIS/COFINS embutido no preço do fornecedor.
 - Aceita números no formato brasileiro (`2.500,00`) e guarda os últimos valores digitados no próprio navegador.
+
+---
+
+## Como usar
+
+### Localmente
+Baixe o repositório e abra o `index.html` em qualquer navegador.
+
+### GitHub Pages
+1. No repositório, vá em **Settings → Pages**.
+2. Em **Build and deployment**, escolha **Deploy from a branch**.
+3. Selecione a branch `main` e a pasta `/ (root)` e clique em **Save**.
+4. Em alguns minutos o simulador fica disponível em `https://<usuario>.github.io/<repositorio>/`.
 
 ---
 
@@ -105,10 +119,11 @@ mesmo valor:      F = (margem de hoje + K) ÷ [(1 − a) ÷ (1 + a × t)]
 mesmo percentual: F = K ÷ [(1 − a) ÷ (1 + a × t) − margem % × (1 + t) ÷ (1 + a × t)]
 ```
 
-Se a margem percentual de hoje for alta demais para ser alcançada com as premissas informadas, o simulador avisa que não há preço possível.
+A margem percentual de 2027 cresce com o preço, mas nunca passa de um teto: (1 − ICMS/ISS) ÷ (1 + CBS), com a CBS na base do ICMS/ISS. Se a margem percentual de hoje estiver acima desse teto (por exemplo, numa empresa de serviço sem custos, em que a margem fica travada), não existe preço que a mantenha, e o simulador mostra o teto e sugere o critério em reais.
 
 ### Margem e carga efetiva
-- **Margem** = líquido da venda − custo da compra + créditos sobre a compra (PIS/COFINS ou CBS, e ICMS no comércio). Frete, serviços e devoluções entram só na carga efetiva.
+- **Margem** = líquido da venda − custo da compra + créditos sobre a compra (PIS/COFINS ou CBS, e ICMS no comércio). Por padrão, frete, serviços e devoluções entram só na carga efetiva.
+- Com a opção **Incluir frete e serviços tomados na margem**, a margem também desconta o frete e os serviços tomados e soma os créditos de cada um: PIS/COFINS hoje (frete no não cumulativo; serviços só na empresa de serviço) e CBS e ICMS em 2027. O preço sugerido passa a considerar esses custos.
 - **Carga efetiva** = débito − créditos − devoluções.
 - Percentuais de **hoje** são calculados sobre o preço de venda; os de **2027**, sobre o preço ao cliente (vendas brutas do cenário).
 
@@ -157,3 +172,11 @@ Se a margem percentual de hoje for alta demais para ser alcançada com as premis
 ## Autor
 
 Maicon Felipe Teixeira dos Reis
+
+---
+
+## Direitos autorais
+
+© 2026 Maicon Felipe Teixeira dos Reis. **Todos os direitos reservados.**
+
+Este repositório não concede nenhuma licença de uso. É proibida a cópia, reprodução, modificação ou distribuição, total ou parcial, deste simulador e do seu código sem autorização prévia e por escrito do autor.

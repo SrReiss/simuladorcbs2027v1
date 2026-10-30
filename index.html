@@ -287,6 +287,7 @@ body { margin: 0; }
             <span class="affix"><input id="dev" inputmode="decimal" autocomplete="off"><span class="unit post">%</span></span></label>
         </div>
         <p class="hint">Use só o que gera crédito de CBS: fornecedores e prestadores do regime regular.</p>
+        <label class="check"><input type="checkbox" id="margemDesp"><span>Incluir frete e serviços tomados na margem<br><span class="hint">Recomendado para prestadores de serviço, em que os serviços tomados são o principal custo. Desligado, a margem considera só a venda e o custo da compra.</span></span></label>
       </fieldset>
 
       <fieldset>
@@ -323,7 +324,7 @@ body { margin: 0; }
       <section class="card">
         <div class="card-head"><h2>Venda e margem</h2><span class="scenario-tag" id="tag1"></span></div>
         <div class="tbl-wrap"><table id="t-venda"></table></div>
-        <p class="note">Hoje em % do preço de venda; 2027 em % do preço ao cliente (vendas brutas do cenário). A margem considera a venda e o custo da compra; frete, serviços e devoluções entram na carga efetiva.</p>
+        <p class="note" id="note-margem"></p>
       </section>
 
       <section class="card" id="sug-card">
@@ -378,6 +379,7 @@ ICMS/ISS = a × preço ao cliente</div>
               <li>Não cumulativo: crédito de 9,25% sobre compras e frete, sem o ICMS. Serviços tomados geram crédito só quando a empresa é de serviço.</li>
               <li>Cumulativo: sem créditos.</li>
             </ul></div>
+          <div><h3>Margem</h3><p>Venda − tributos − custo da compra + créditos sobre a compra. Com a opção "Incluir frete e serviços tomados na margem", também desconta o frete e os serviços tomados e soma os créditos de cada um (PIS/COFINS hoje, CBS e ICMS em 2027).</p></div>
           <div><h3>Devoluções</h3><p>Espelham a venda: estornam o mesmo percentual de PIS/COFINS, CBS e ICMS próprio da venda. O DIFAL pago ao destino não é recuperado.</p></div>
           <p class="foot">Simulação unitária para apoiar decisões de preço. Não substitui a apuração nem a análise caso a caso.</p>
         </div>
@@ -438,6 +440,8 @@ ICMS/ISS = a × preço ao cliente</div>
     var devPC0 = dv * pis0, devICMS0 = dv * icms0, devISS0 = dv * iss0;
     var pcEf0 = pis0 - credPCC0 - credPCFr0 - credPCS0 - devPC0;
     var consEf0 = com ? (icms0 + difal0 - credICMSC0 - credICMSFr0 - devICMS0) : (iss0 - devISS0);
+    var desp = !!s.margemDesp;                 // frete e serviços tomados entram na margem
+    if (desp) marg0 -= (Fr - credPCFr0 - credICMSFr0) + (S - credPCS0);
 
     // 2027
     var F = Fforce != null ? Fforce : (venda === "C2" ? P : P - pc * basePC);
@@ -457,16 +461,18 @@ ICMS/ISS = a × preço ao cliente</div>
     var devCBS = dv * v.cbs, devICMS1 = dv * icms1, devISS1 = dv * iss1;
     var cbsEf = v.cbs - c.cbs - f.cbs - sv.cbs - devCBS;
     var consEf1 = com ? (icms1 + difal1 - credICMSC1 - credICMSFr1 - devICMS1) : (iss1 - devISS1);
+    if (desp) marg1 -= (f.nota - f.cbs - credICMSFr1) + (sv.nota - sv.cbs);
 
     return {
-      com: com, nc: nc, pc: pc, t: t, P: P,
+      com: com, nc: nc, pc: pc, t: t, P: P, desp: desp,
       hoje: { icms: icms0, difal: difal0, iss: iss0, pis: pis0, liq: liq0, custo: C,
               credPCC: credPCC0, credICMSC: credICMSC0, marg: marg0, credPCFr: credPCFr0,
-              credICMSFr: credICMSFr0, credPCS: credPCS0, devPC: devPC0, pcEf: pcEf0, consEf: consEf0 },
+              credICMSFr: credICMSFr0, credPCS: credPCS0, devPC: devPC0, pcEf: pcEf0, consEf: consEf0,
+              frete: Fr, serv: S },
       novo: { F: F, cbs: v.cbs, nota: v.nota, icms: icms1, difal: difal1, iss: iss1, liq: liq1,
               custo: c.nota, credCBSC: c.cbs, credICMSC: credICMSC1, marg: marg1,
               credCBSFr: f.cbs, credICMSFr: credICMSFr1, credCBSS: sv.cbs, devCBS: devCBS,
-              cbsEf: cbsEf, consEf: consEf1 }
+              cbsEf: cbsEf, consEf: consEf1, frete: f.nota, serv: sv.nota }
     };
   }
 
@@ -520,7 +526,7 @@ ICMS/ISS = a × preço ao cliente</div>
   var NUMS = ["P", "icms", "difal", "iss", "custo", "icmsC", "frete", "icmsF", "serv", "issS", "dev", "ref", "pcForn"];
   var DEF = { P: 1000, icms: 12, difal: 5, iss: 5, custo: 50.8, icmsC: 12, frete: 10.72, icmsF: 12, serv: 14.95, issS: 3,
               dev: 3.27, ref: 11.3468, pcForn: 9.25, ativ: "comercio", regime: "nc", venda: "C3", forn: "F3",
-              integra: true, excluiISS: true, alvo: "valor" };
+              integra: true, excluiISS: true, alvo: "valor", margemDesp: false };
   var KEY = "simulador-cbs-2027-v1";
   var $ = function (id) { return document.getElementById(id); };
   var state = {};
@@ -540,6 +546,7 @@ ICMS/ISS = a × preço ao cliente</div>
     });
     $("integra").checked = !!state.integra;
     $("excluiISS").checked = !!state.excluiISS;
+    $("margemDesp").checked = !!state.margemDesp;
   }
 
   // ---------------- Render ----------------
@@ -589,6 +596,10 @@ ICMS/ISS = a × preço ao cliente</div>
       '<div class="kpi"><span class="k">Tributos sobre o consumo</span><span class="v">' + pct(t1) + '</span><span class="s">Hoje ' + pct(t0) +
         ' · <span class="chip ' + goodBad(t1 - t0, false) + '">' + ppf(t1 - t0) + "</span></span></div>";
 
+    $("note-margem").textContent = "Hoje em % do preço de venda; 2027 em % do preço ao cliente (vendas brutas do cenário). " +
+      (r.desp ? "A margem considera a venda, o custo da compra, o frete e os serviços tomados, com os créditos de cada um; as devoluções entram na carga efetiva."
+              : "A margem considera a venda e o custo da compra; frete, serviços e devoluções entram na carga efetiva.");
+
     // Tabela venda e margem
     var head = "<thead><tr><th></th><th>Hoje<br>PIS/COFINS</th><th>2027<br>CBS</th><th>Diferença</th></tr></thead><tbody>";
     var b = head;
@@ -608,6 +619,13 @@ ICMS/ISS = a × preço ao cliente</div>
     b += row("", "(+) Crédito de PIS/COFINS", nc ? { v: h.credPCC } : "sem crédito", null, money(-h.credPCC));
     b += row("", "(+) Crédito de CBS", null, { v: n.credCBSC }, money(n.credCBSC));
     if (com) b += row("", "(+) Crédito de ICMS", { v: h.credICMSC }, { v: n.credICMSC }, money(n.credICMSC - h.credICMSC));
+    if (r.desp) {
+      var crFr0 = h.credPCFr + h.credICMSFr, crFr1 = n.credCBSFr + n.credICMSFr;
+      b += row("", "(−) Frete", { v: h.frete }, { v: n.frete }, money(n.frete - h.frete), goodBad(n.frete - h.frete, false));
+      b += row("", "(+) Créditos sobre o frete", (nc || com) ? { v: crFr0 } : "sem crédito", { v: crFr1 }, money(crFr1 - crFr0));
+      b += row("", "(−) Serviços tomados", { v: h.serv }, { v: n.serv }, money(n.serv - h.serv), goodBad(n.serv - h.serv, false));
+      b += row("", "(+) Crédito sobre serviços tomados", (nc && !com) ? { v: h.credPCS } : "sem crédito", { v: n.credCBSS }, money(n.credCBSS - h.credPCS));
+    }
     b += row("total hl-margem", "Margem", { v: h.marg, p: m0 }, { v: n.marg, p: m1 }, money(n.marg - h.marg) + '<span class="pct">' + ppf(m1 - m0) + "</span>");
     $("t-venda").innerHTML = b + "</tbody>";
 
